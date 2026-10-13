@@ -1,0 +1,32 @@
+Whispering — quick start
+=======================
+
+1. Extract the whole Whispering folder to a local drive.
+2. Open Whispering.exe. The model is already included.
+3. Choose your microphone in Settings if the Windows default is not right.
+4. Press Ctrl+Shift+Space to start. Speak. Press again to transcribe.
+5. Find the text in Dashboard or History. Use Save text to export it.
+
+If transcription fails:
+Open History → Retry transcription, or Save audio to keep the recording.
+The latest five recordings are retained for 24 hours by default.
+The sixth recording replaces the oldest, including failed recordings.
+Change expiry in Settings. Cleanup runs while open or at next launch.
+
+You may enable typing directly into the application where you started
+recording. This is off by default. Find it in Settings.
+
+Keep Whispering open or minimized to use the shortcut. Closing it quits.
+Recordings and audio files can be up to 10 minutes long.
+Read aloud uses a Microsoft voice already installed in Windows.
+
+Microphone blocked? In Windows Settings, enable microphone access for
+desktop applications under Privacy & security → Microphone.
+
+No internet or account is needed. Keep models/ and the DLL files alongside
+Whispering.exe. Do not move just the EXE. Use local folders for exports if
+you want to avoid cloud sync. Data is saved in %LOCALAPPDATA%\Whispering.
+
+This is an unsigned local build. Check that you trust its source before
+running it. See README.md for details, privacy boundaries, and source build
+instructions.

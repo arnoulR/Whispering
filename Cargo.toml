@@ -1,0 +1,39 @@
+[package]
+name = "whispering"
+version = "0.1.0"
+edition = "2021"
+description = "Private, local Windows dictation with Parakeet v3"
+license = "MIT"
+build = "build.rs"
+
+[dependencies]
+anyhow = "1"
+eframe = { version = "0.31", default-features = false, features = ["default_fonts", "glow"] }
+cpal = "0.15"
+hound = "3.5"
+global-hotkey = "0.6"
+rfd = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+sha2 = "0.10"
+fs2 = "0.4"
+symphonia = { version = "0.5", features = ["mp3", "wav", "flac", "ogg", "vorbis", "pcm", "aac", "isomp4"] }
+transcribe-rs = { version = "=0.3.12", default-features = false, features = ["onnx"] }
+ort = { version = "=2.0.0-rc.12", default-features = false, features = ["load-dynamic"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+windows = { version = "0.58", features = ["Win32_Media_Speech", "Win32_System_Com", "Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse", "Win32_Storage_FileSystem", "Win32_System_Threading"] }
+
+[build-dependencies]
+winresource = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true
+

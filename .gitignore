@@ -1,0 +1,9 @@
+/target/
+/.tools/
+/.reference/
+/dist/
+/models/*
+!/models/README.md
+*.partial
+/docs/validation/preview-data/
+
