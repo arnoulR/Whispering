@@ -5,6 +5,7 @@ mod engine;
 mod output;
 mod speech;
 mod store;
+mod ui;
 
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
@@ -51,8 +52,14 @@ fn main() -> anyhow::Result<()> {
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title("Whispering")
-            .with_inner_size([1060.0, 720.0])
-            .with_min_inner_size([800.0, 570.0])
+            .with_inner_size(
+                if preview && args.get(5).map(String::as_str) == Some("compact") {
+                    [880.0, 650.0]
+                } else {
+                    [1180.0, 800.0]
+                },
+            )
+            .with_min_inner_size([880.0, 650.0])
             .with_icon(eframe::egui::IconData {
                 rgba: icon.into_raw(),
                 width: w,

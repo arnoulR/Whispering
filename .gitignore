@@ -6,4 +6,6 @@
 !/models/README.md
 *.partial
 /docs/validation/preview-data/
+/docs/validation/redesign/preview-data/
 
+/docs/validation/indicator/preview-data/

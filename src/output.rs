@@ -51,3 +51,13 @@ pub fn type_text(target: usize, text: &str) -> Result<()> {
         Ok(())
     }
 }
+
+// Clicking Retry temporarily focuses our indicator. Return to the dictation
+// destination; type_text still verifies focus when inference finishes.
+pub fn restore_target(target: usize) {
+    unsafe {
+        let _ = windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow(HWND(
+            target as *mut std::ffi::c_void,
+        ));
+    }
+}

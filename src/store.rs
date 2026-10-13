@@ -52,6 +52,8 @@ pub struct Settings {
     pub retention_hours: u32,
     pub onboarded: bool,
     pub type_into_app: bool,
+    pub theme: Theme,
+    pub language: Language,
     pub rules: Vec<Rule>,
 }
 impl Default for Settings {
@@ -61,8 +63,40 @@ impl Default for Settings {
             microphone: String::new(),
             retention_hours: 24,
             onboarded: false,
-            type_into_app: false,
+            type_into_app: true,
+            theme: Theme::System,
+            language: Language::English,
             rules: vec![],
+        }
+    }
+}
+#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Language {
+    #[default]
+    English,
+    German,
+}
+impl Language {
+    pub fn text(self, english: &'static str, german: &'static str) -> &'static str {
+        match self {
+            Self::English => english,
+            Self::German => german,
+        }
+    }
+}
+#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Theme {
+    #[default]
+    System,
+    Light,
+    Dark,
+}
+impl Theme {
+    pub fn preference(self) -> eframe::egui::ThemePreference {
+        match self {
+            Self::System => eframe::egui::ThemePreference::System,
+            Self::Light => eframe::egui::ThemePreference::Light,
+            Self::Dark => eframe::egui::ThemePreference::Dark,
         }
     }
 }

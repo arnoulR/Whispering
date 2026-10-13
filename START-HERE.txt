@@ -5,10 +5,10 @@ Whispering — quick start
 2. Open Whispering.exe. The model is already included.
 3. Choose your microphone in Settings if the Windows default is not right.
 4. Press Ctrl+Shift+Space to start. Speak. Press again to transcribe.
-5. Find the text in Dashboard or History. Use Save text to export it.
+5. Find the text in Dictation or History. Use Export text to export it.
 
 If transcription fails:
-Open History → Retry transcription, or Save audio to keep the recording.
+Open History → Retry, or Export audio to keep the recording.
 The latest five recordings are retained for 24 hours by default.
 The sixth recording replaces the oldest, including failed recordings.
 Change expiry in Settings. Cleanup runs while open or at next launch.

@@ -4,7 +4,7 @@ use std::{
     fs::File,
     path::Path,
     sync::{
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicU32, AtomicU64, Ordering},
         Arc, Mutex,
     },
     time::Instant,
@@ -22,6 +22,7 @@ pub struct Recording {
     writer: Arc<Mutex<Option<hound::WavWriter<std::io::BufWriter<File>>>>>,
     pub error: Arc<Mutex<Option<String>>>,
     samples: Arc<AtomicU64>,
+    level: Arc<AtomicU32>,
     rate: u32,
     pub started: Instant,
 }
@@ -49,6 +50,7 @@ impl Recording {
         )?)));
         let error = Arc::new(Mutex::new(None));
         let samples = Arc::new(AtomicU64::new(0));
+        let level = Arc::new(AtomicU32::new(0));
         let stream = match supported.sample_format() {
             cpal::SampleFormat::F32 => build::<f32>(
                 &device,
@@ -56,6 +58,7 @@ impl Recording {
                 writer.clone(),
                 error.clone(),
                 samples.clone(),
+                level.clone(),
             )?,
             cpal::SampleFormat::I16 => build::<i16>(
                 &device,
@@ -63,6 +66,7 @@ impl Recording {
                 writer.clone(),
                 error.clone(),
                 samples.clone(),
+                level.clone(),
             )?,
             cpal::SampleFormat::U16 => build::<u16>(
                 &device,
@@ -70,6 +74,7 @@ impl Recording {
                 writer.clone(),
                 error.clone(),
                 samples.clone(),
+                level.clone(),
             )?,
             other => bail!("Unsupported microphone sample format: {other:?}"),
         };
@@ -79,12 +84,16 @@ impl Recording {
             writer,
             error,
             samples,
+            level,
             rate,
             started: Instant::now(),
         })
     }
     pub fn seconds(&self) -> f64 {
         self.samples.load(Ordering::Relaxed) as f64 / self.rate as f64
+    }
+    pub fn level(&self) -> f32 {
+        f32::from_bits(self.level.swap(0, Ordering::Relaxed))
     }
     pub fn stop(mut self) -> Result<f64> {
         self.stream.take();
@@ -114,6 +123,7 @@ fn build<T: cpal::SizedSample + cpal::Sample>(
     writer: Writer,
     error: Arc<Mutex<Option<String>>>,
     count: Arc<AtomicU64>,
+    level: Arc<AtomicU32>,
 ) -> Result<cpal::Stream>
 where
     f32: cpal::FromSample<T>,
@@ -124,6 +134,14 @@ where
     Ok(device.build_input_stream(
         config,
         move |data: &[T], _| {
+            // Positive float bits preserve ordering, so retain peaks between UI frames.
+            let peak = data
+                .iter()
+                .map(|s| s.to_sample::<f32>().abs())
+                .filter(|s| s.is_finite())
+                .fold(0.0_f32, f32::max)
+                .min(1.0);
+            level.fetch_max(peak.to_bits(), Ordering::Relaxed);
             if error.lock().unwrap().is_some() {
                 return;
             }

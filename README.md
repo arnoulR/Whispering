@@ -4,26 +4,29 @@ A small native Windows app written in Rust, inspired by TypeWhisper's dictation 
 
 ## Start here
 
+From this project folder, double-click **Start Whispering.cmd**. You can also open `dist\Whispering\Whispering.exe` directly. Windows may hide the `.exe` extension and display it as **Whispering**, with type **Application**.
+
 1. Extract the **entire** `Whispering` release folder to a local drive.
 2. Double-click `Whispering.exe`. Keep the model and DLL files beside it.
 3. Follow the short in-app guide. Select your microphone in Settings if needed.
-4. Press **Ctrl+Shift+Space**, speak, then press it again. The transcript appears in the app.
-5. If transcription fails, open **History** and choose **Retry transcription** or **Save audio**.
+4. Press **Ctrl+Shift+Space**, speak, then press it again. Place the cursor in your destination field first. The transcript appears there and in the app.
+5. A floating indicator shows **Recording** with a live microphone waveform. If transcription fails, choose **Retry** on the indicator or open **History** to retry or export audio.
 
 Keep Whispering open or minimized for its global shortcut to work. Closing the window quits the app. There is no tray process or startup service. If Windows blocks microphone access, enable desktop microphone access in Windows Settings → Privacy & security → Microphone.
 
-Optional: enable **Type completed dictation into the app where recording started** in Settings to dictate into other applications. This sends keyboard events without touching the clipboard, and skips insertion if another window is focused. Leave it off to keep transcripts inside Whispering. You can always explicitly save text or audio.
+**Type into the active app** is enabled by default for new profiles. Existing profiles keep their choice; change it in Settings. This sends keyboard events without touching the clipboard, and skips insertion if another window is focused. Leave it off to keep transcripts inside Whispering. You can always explicitly save text or audio.
 
 ## Included
 
 - Configurable global start/stop shortcut and microphone selection.
+- Always-on-top recording indicator with an audio-driven waveform, transcription progress, and retry. English/German indicator language is selectable in Settings.
 - Local file transcription: WAV, MP3, FLAC, OGG/Vorbis, and supported AAC/M4A files, up to 10 minutes.
 - Automatic language recognition using Parakeet v3's 25 supported European languages.
 - Local read-aloud with an installed Microsoft Windows SAPI voice. Parakeet itself is speech-to-text only.
 - Latest five recordings, including failures, with retry, WAV export, text export, and delete.
 - Recovery after app interruption: audio is written during recording, with its WAV header refreshed on each buffer.
 - Simple dictionary corrections and statistics for the retained recordings.
-- Plain native interface, original waveform logo, and in-app setup guide.
+- Native interface with light, dark, and Windows system themes, a centered AI sparkle logo, and a short setup guide.
 
 ## Recovery and privacy
 
@@ -61,4 +64,3 @@ For a local toolchain in this workspace, `Build.ps1` automatically uses `.tools/
 ## Attribution
 
 Whispering is an independent Rust implementation inspired by [TypeWhisper for Windows](https://github.com/TypeWhisper/typewhisper-win). No TypeWhisper implementation code or branding is included. [NVIDIA Parakeet v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) is CC BY 4.0; the bundled quantized [ONNX conversion by Ivan Stupakov](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx) is attributed in `THIRD-PARTY-NOTICES.md`. Rust inference uses [transcribe-rs](https://github.com/cjpais/transcribe-rs), with only the local ONNX feature enabled. See the included dependency notices and licenses.
-"# Whispering" 

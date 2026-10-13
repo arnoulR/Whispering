@@ -3,6 +3,13 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 $dest = Join-Path $root 'dist/Whispering'
+function Copy-BundleDll($source) {
+    $target = Join-Path $dest $source.Name
+    # An open app locks its DLLs; identical bundled files need no replacement.
+    if ((Test-Path -LiteralPath $target) -and
+        (Get-FileHash -LiteralPath $source.FullName).Hash -eq (Get-FileHash -LiteralPath $target).Hash) { return }
+    Copy-Item -LiteralPath $source.FullName -Destination $target -Force
+}
 New-Item -ItemType Directory -Force $dest,(Join-Path $dest 'models'),(Join-Path $dest 'licenses/source'),(Join-Path $dest 'assets') | Out-Null
 if (!(Test-Path 'target/release/whispering.exe')) { throw 'Build the release first.' }
 foreach ($name in @('encoder-model.int8.onnx','decoder_joint-model.int8.onnx','nemo128.onnx','vocab.txt')) {
@@ -13,7 +20,7 @@ Copy-Item 'target/release/whispering.exe' (Join-Path $dest 'Whispering.exe') -Fo
 Copy-Item 'models/parakeet-v3' (Join-Path $dest 'models') -Recurse -Force
 $runtime = '.tools/onnxruntime/onnxruntime-win-x64-1.24.2'
 if ((Get-FileHash "$runtime/lib/onnxruntime.dll" -Algorithm SHA256).Hash.ToLowerInvariant() -ne '114947d633e6844ce3c4b51ef6678f776628571d08a5763859c61642c8dcca9c') { throw 'Runtime integrity error' }
-Copy-Item "$runtime/lib/*.dll" $dest -Force
+Get-ChildItem "$runtime/lib/*.dll" | ForEach-Object { Copy-BundleDll $_ }
 Copy-Item "$runtime/LICENSE","$runtime/ThirdPartyNotices.txt" (Join-Path $dest 'licenses') -Force
 Copy-Item 'licenses/CC-BY-4.0.txt' (Join-Path $dest 'licenses') -Force
 Copy-Item 'README.md','START-HERE.txt','LICENSE','THIRD-PARTY-NOTICES.md' $dest -Force
@@ -21,7 +28,7 @@ Copy-Item 'docs/VALIDATION.md' $dest -Force
 Copy-Item 'assets/model-hashes.json' (Join-Path $dest 'assets') -Force
 $crt = Get-ChildItem 'C:/Program Files (x86)/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT' -Directory | Select-Object -First 1
 if (!$crt) { throw 'Microsoft VC143 x64 runtime redistribution folder not found.' }
-Copy-Item (Join-Path $crt.FullName '*.dll') $dest -Force
+Get-ChildItem (Join-Path $crt.FullName '*.dll') | ForEach-Object { Copy-BundleDll $_ }
 if (Test-Path '.tools/cargo/bin/cargo.exe') {
     $env:RUSTUP_HOME=Join-Path $root '.tools/rustup';$env:CARGO_HOME=Join-Path $root '.tools/cargo';$env:PATH=(Join-Path $root '.tools/cargo/bin')+';'+$env:PATH
 }
