@@ -1,79 +1,56 @@
 # Whispering
 
-A small native Windows app written in Rust, inspired by TypeWhisper's dictation workflow. Local speech recognition is fixed to **NVIDIA Parakeet TDT 0.6B v3**, using an INT8 ONNX conversion on your CPU. The complete release includes the model. No Python, account, GPU, or model download is required to use it.
+Local dictation for Windows, built in Rust. Whispering turns speech into text using NVIDIA Parakeet TDT 0.6B v3 on your CPU. Releases include the model: no account, Python, GPU, or runtime download is needed.
 
-## Start here
+## Install
 
-From this project folder, double-click **Start Whispering.cmd** to launch the newest staged bundle. After MSI installation, open `C:\Program Files\Whispering\Whispering.exe`. Windows may hide the `.exe` extension and display it as **Whispering**, with type **Application**.
+Get the Windows x64 package from [GitHub Releases](https://github.com/arnoulR/Whispering/releases).
 
-1. Extract the **entire** `Whispering` release folder to a local drive.
-2. Double-click `Whispering.exe`. Keep the model and DLL files beside it.
-3. Follow the short in-app guide. Select your microphone in Settings if needed.
-4. Press **Ctrl+Shift+Space**, speak, then press it again. Place the cursor in your destination field first. The transcript appears there and in the app.
-5. A floating indicator shows **Recording** with a live microphone waveform. If transcription fails, choose **Retry** on the indicator or open **History** to retry or export audio.
+- **Installer:** run `Whispering-windows-x64.msi`, then open `C:\Program Files\Whispering\Whispering.exe`. Installation requires administrator permission; running the app does not.
+- **Portable:** extract the entire ZIP and open `Whispering.exe`. Keep the bundled models and DLLs beside it.
 
-Keep Whispering open or minimized for its global shortcut to work. Closing the window quits the app. There is no tray process or startup service. If Windows blocks microphone access, enable desktop microphone access in Windows Settings → Privacy & security → Microphone.
+Windows 10/11 x64, a microphone, and an OpenGL-capable graphics driver are required. Allow approximately 750 MB for the app plus recording storage; 8 GB of RAM is recommended. Performance depends on your CPU. Windows ARM has not been validated.
 
-**Type into the active app** is enabled by default for new profiles. Existing profiles keep their choice; change it in Settings. This sends keyboard events without touching the clipboard, and skips insertion if another window is focused. Leave it off to keep transcripts inside Whispering. You can always explicitly save text or audio.
+## Use
 
-## Included
+1. Open Whispering and select your microphone in Settings if needed.
+2. Place the cursor in the destination text field.
+3. Press **Ctrl+Shift+Space**, speak, then press it again to transcribe. The shortcut is configurable.
+4. The transcript appears in Whispering and is typed into the destination app.
 
-- Configurable global start/stop shortcut and microphone selection.
-- Draggable, always-on-top recording indicator with an elapsed timer, audio-driven waveform, fixed-size transcription progress, and retry. English/German indicator language is selectable in Settings.
-- Local file transcription: WAV, MP3, FLAC, OGG/Vorbis, and supported AAC/M4A files, up to 60 minutes.
-- Automatic language recognition using Parakeet v3's 25 supported European languages.
-- Local read-aloud with an installed Microsoft Windows SAPI voice. Parakeet itself is speech-to-text only.
-- Latest ten recordings, including failures, with retry, WAV export, text export, and delete.
-- Recovery after app interruption: audio is written during recording, with its WAV header refreshed on each buffer.
-- Simple dictionary corrections and persistent local statistics independent of retained recordings.
-- Native interface with light, dark, and Windows system themes, a centered AI sparkle logo, and a short setup guide.
+**Type into the active app** is enabled for new profiles; existing profiles keep their setting. Disable it in Settings to keep transcripts inside Whispering. Automatic insertion is skipped if another window is focused and can be blocked by elevated applications or unsupported controls.
 
-## Recovery and privacy
+Keep Whispering open or minimized for the global shortcut to work. Closing the window quits the app; there is no tray process or startup service.
 
-Recordings and transcripts are stored in `%LOCALAPPDATA%\Whispering`. Settings, history, and statistics use atomic file replacement. Another instance cannot open the same data folder while the first is running.
+## Features
 
-The default keeps **the latest ten recordings for up to 24 hours**, including failures. The eleventh replaces the oldest. Settings offer 1 hour, 24 hours, or 7 days. Cleanup runs while idle and on the next launch; nothing runs while the app is closed. Export audio you need to retain. A crash or power loss can lose the last buffer; a full disk or hardware failure can prevent recording. A damaged history index is reported without deleting audio files.
+- Local speech recognition with automatic language recognition across Parakeet v3's 25 supported European languages.
+- A draggable recording indicator with timer, microphone waveform, progress, and retry; English and German indicator labels.
+- File transcription for WAV, MP3, FLAC, OGG/Vorbis, and supported AAC/M4A files. Recording and import are limited to 60 minutes; recording stops and transcribes automatically at the limit.
+- History with retry, copy, text export, WAV export, and delete; dictionary corrections and local dictation statistics.
+- Read-aloud using an installed Windows voice, plus light, dark, and system themes.
 
-There are no cloud providers, accounts, telemetry calls, update checks, plugin loaders, local HTTP servers, or runtime downloads in the app. ONNX telemetry is explicitly disabled. The model and ONNX DLL are SHA-256 checked before inference. The UI has no model selector or model import.
+## Privacy and storage
 
-Export and optional automatic typing intentionally send content to a destination you choose. A cloud-synced destination folder or another app can transmit that content independently. Standard text selection/copy is also a user-directed clipboard action. Local history is not encrypted by Whispering; use Windows device encryption/BitLocker for data at rest. Expiry uses ordinary deletion, not forensic secure erasure. The application does not provide an OS security boundary against malware or a compromised Windows installation.
+Speech recognition runs locally. The app has no accounts, cloud services, telemetry, update checks, or runtime downloads. The bundled model and ONNX runtime are checked against SHA-256 hashes before inference.
 
-## Requirements and limits
+Settings, audio, transcripts, and statistics live in `%LOCALAPPDATA%\Whispering`. History keeps the **latest ten recordings for up to 24 hours** by default, including failures; the eleventh replaces the oldest. Settings offer 1 hour, 24 hours, or 7 days. Cleanup runs while the app is open or on its next launch. Export recordings you need to keep. Uninstalling does not erase this user data.
 
-Windows 10/11 **x64**, a working microphone, and an OpenGL-capable graphics driver for the native UI. Allow approximately 750 MB for the app bundle and additional space for recovery recordings. 8 GB of RAM is recommended; actual performance depends on your CPU. No discrete GPU is required. ARM and older Windows versions have not been validated.
+Statistics count completed microphone dictations independently of history. Retrying, editing, deleting, or expiring recordings does not add another count or erase statistics; imports and failures are excluded. Statistics retain recording identifiers, dates, word counts, durations, and available destination executable names, without audio, transcripts, full paths, or window titles. They remain until `statistics.json` is removed with the app closed.
 
-Recordings and imported audio are limited to **60 minutes**. At the recording limit, Whispering automatically stops, saves the audio, and starts transcription. Long recordings are split near quieter boundaries to bound memory usage; words at boundaries can occasionally be imperfect. Microsoft voices already installed in Windows are used for read-aloud. There is no voice download facility. Automatic typing can be blocked by elevated applications and may not work in every control.
+Local data is not encrypted by Whispering, and expiry uses ordinary deletion. Copying, exporting, and automatic typing send content to destinations you choose; other apps or cloud-synced folders may transmit it independently.
 
-## Build from source
+## Troubleshooting
 
-Install the Rust MSVC toolchain and Visual Studio C++ Build Tools with a Windows SDK. Then:
+- **Microphone blocked:** enable desktop microphone access in Windows Settings → Privacy & security → Microphone.
+- **Transcription failed:** use Retry on the indicator or in History, or export the audio. Restore the complete release package if model or runtime files are missing or fail integrity checks.
+- **Missing recent audio after interruption:** recording audio is saved during capture, but a crash can lose the last buffer and a full disk can prevent saving.
+- **Long recordings:** audio is split near quieter boundaries to limit memory usage; words at those boundaries can occasionally be imperfect.
 
-```powershell
-./scripts/Prepare-Assets.ps1   # developer-only downloads verified against assets.lock.json
-./scripts/Fetch-Licenses.ps1    # license texts omitted from some crate archives
-./scripts/Build.ps1 -Test
-./scripts/Build.ps1 -Release
-$bundle = ./scripts/Build-Package.ps1
-dotnet tool install wix --version 5.0.2 --tool-path .tools/wix
-./scripts/Build-Installer.ps1 -BundleDirectory $bundle
-```
+Report reproducible bugs through [GitHub Issues](https://github.com/arnoulR/Whispering/issues). Include your app version, Windows version, and steps to reproduce; keep private recordings and transcripts out of reports.
 
-Each package is assembled in a fresh `dist/staging-*/Whispering` folder. Outputs are `dist/Whispering-windows-x64.zip` and `dist/Whispering-windows-x64.msi`. The MSI installs under Program Files. Build scripts access the internet only to prepare dependencies and assets; they are not run by the application. Cargo.lock fixes Rust dependencies; rust-toolchain.toml pins Rust. There is no custom model path or alternate inference provider. See [administration and signing](docs/admin-guide.md) and the [user guide](docs/user-guide.md).
+## Development and credits
 
-The repository contains source, embedded UI assets, license texts, documentation and release recipes. Binaries, models, signing material, recordings, profiles, security audits and local validation evidence are ignored. Upload distributable binaries to GitHub Releases. Existing local validation files remain on disk but are no longer tracked; historical commits are not rewritten. `assets.lock.json` pins download URLs and hashes; the VC runtime is pinned by version and file hashes and supplied from Visual Studio's redistribution directory.
+See [building and releases](https://github.com/arnoulR/Whispering/blob/main/docs/build.md) for source builds and packaging. Changes are described in [GitHub Releases](https://github.com/arnoulR/Whispering/releases).
 
-For a local toolchain in this workspace, `Build.ps1` automatically uses `.tools/cargo` and `.tools/rustup`. These are development files, not part of the release. To regenerate the original icon, run `scripts/Make-Icon.ps1`.
-
-## Attribution
-
-Whispering is an independent Rust implementation inspired by [TypeWhisper for Windows](https://github.com/TypeWhisper/typewhisper-win). No TypeWhisper implementation code or branding is included. [NVIDIA Parakeet v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) is CC BY 4.0; the bundled quantized [ONNX conversion by Ivan Stupakov](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx) is attributed in `THIRD-PARTY-NOTICES.md`. Rust inference uses [transcribe-rs](https://github.com/cjpais/transcribe-rs), with only the local ONNX feature enabled. See the included dependency notices and licenses.
-
-## Local statistics
-
-The dashboard and Statistics page show the last 7 days, last 30 days, or all time. Completed microphone dictations contribute once to `statistics.json` in the local data folder, independently of the ten retained recordings. Retrying, editing, deleting, or expiring a recording does not add another count or erase its statistics. Imported audio and failed attempts are excluded. Existing completed microphone recordings are migrated on launch before retention cleanup; already deleted recordings cannot be reconstructed.
-
-The statistics file stores a recording identifier, local calendar date, word count, duration, and (when available) the destination executable's basename. It contains no transcript, audio, full executable path, or window title. App names are captured when recording starts; a dictation started in Whispering is attributed to Whispering. Older recordings have no app attribution.
-
-Words per minute uses total words divided by total recorded minutes. Estimated time saved is typing time at 40 words per minute minus recording time, never below zero. Streaks count consecutive active calendar days within the selected period; a current streak can end today or yesterday. Statistics remain locally until their file is removed with the app closed.
-
-Read aloud uses the play icon beside its label; the icon changes to pause while speaking and resumes the same reading when pressed again. Copy text is available in the transcript footer and every History card.
+Whispering is an independent implementation inspired by [TypeWhisper for Windows](https://github.com/TypeWhisper/typewhisper-win). It uses NVIDIA Parakeet v3 with Ivan Stupakov's INT8 ONNX conversion and transcribe-rs for inference. See [third-party notices](THIRD-PARTY-NOTICES.md) for attribution and licenses. Whispering's code is [MIT licensed](LICENSE).

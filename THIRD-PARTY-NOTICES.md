@@ -14,7 +14,7 @@ The model was exported to ONNX and quantized to INT8 by **Ivan Stupakov**, https
 - transcribe-rs, copyright its contributors, MIT: https://github.com/cjpais/transcribe-rs
 - Microsoft ONNX Runtime 1.24.2, MIT: https://github.com/microsoft/onnxruntime
 - egui/eframe, copyright its contributors, MIT or Apache-2.0: https://github.com/emilk/egui
-- All Rust dependency license texts and package metadata are collected into the release `licenses` directory by `scripts/Package.ps1`.
+- All Rust dependency license texts and package metadata are collected into the release `licenses` directory by `scripts/Build-Package.ps1`.
 - Symphonia is licensed under MPL 2.0. The corresponding unmodified source for its included crates is supplied in `licenses/source/`; these crates are also available by version from https://crates.io and https://github.com/pdeljanov/Symphonia .
 - Microsoft Visual C++ runtime redistributable DLLs are included from the installed Visual Studio redistribution directory under Microsoft's redistribution terms. They remain Microsoft software.
 

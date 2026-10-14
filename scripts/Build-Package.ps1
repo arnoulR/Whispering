@@ -27,8 +27,7 @@ foreach ($name in @('onnxruntime.dll','onnxruntime_providers_shared.dll')) { Cop
 Copy-Item "$runtime/LICENSE","$runtime/ThirdPartyNotices.txt" (Join-Path $dest 'licenses') -Force
 Copy-Item 'licenses/Roboto-OFL.txt','licenses/Lucide-LICENSE.txt' (Join-Path $dest 'licenses') -Force
 Copy-Item 'licenses/CC-BY-4.0.txt' (Join-Path $dest 'licenses') -Force
-Copy-Item 'README.md','START-HERE.txt','LICENSE','THIRD-PARTY-NOTICES.md' $dest -Force
-Copy-Item 'docs/user-guide.md','docs/admin-guide.md' $dest -Force
+Copy-Item 'README.md','LICENSE','THIRD-PARTY-NOTICES.md' $dest -Force
 Copy-Item 'assets/model-hashes.json' (Join-Path $dest 'assets') -Force
 if (!$VcRuntimeDirectory) {
     $crt = Get-ChildItem "C:/Program Files (x86)/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/$($lock.vcRuntime.version)/x64/Microsoft.VC143.CRT" -Directory | Select-Object -First 1

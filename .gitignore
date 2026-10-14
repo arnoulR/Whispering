@@ -2,8 +2,7 @@
 /.tools/
 /.reference/
 /dist/
-/models/*
-!/models/README.md
+/models/
 *.partial
 # Generated binaries, packages, and signing material
 *.exe
