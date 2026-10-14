@@ -48,6 +48,7 @@ pub struct App {
     waveform: std::collections::VecDeque<f32>,
     waveform_tick: Instant,
     floating_position: Option<egui::Pos2>,
+    floating_native: Option<(usize, i32, i32, i32)>,
 }
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>, store: Store) -> Self {
@@ -97,6 +98,7 @@ impl App {
             waveform: std::collections::VecDeque::from(vec![0.; 24]),
             waveform_tick: Instant::now(),
             floating_position: None,
+            floating_native: None,
         };
         let args: Vec<String> = std::env::args().collect();
         if args.get(1).map(String::as_str) == Some("--preview") {
@@ -278,7 +280,7 @@ impl App {
         match audio::Recording::start(&self.store.audio(id), &self.store.settings.microphone) {
             Ok(recording) => {
                 self.floating_job = Some(id);
-                self.floating_position = None;
+                self.floating_native = None;
                 self.waveform = std::collections::VecDeque::from(vec![0.; 24]);
                 self.recorder = Some((id, recording));
                 self.message.clear();
@@ -327,7 +329,9 @@ impl App {
             }
         }
         if self.recorder.as_ref().is_some_and(|(_, r)| {
-            r.started.elapsed().as_secs() >= audio::MAX_SECONDS || r.error.lock().unwrap().is_some()
+            r.started.elapsed().as_secs() >= audio::MAX_SECONDS
+                || r.seconds() >= audio::MAX_SECONDS as f64
+                || r.error.lock().unwrap().is_some()
         }) {
             self.toggle_recording();
         }

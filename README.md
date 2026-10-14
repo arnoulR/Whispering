@@ -19,8 +19,8 @@ Keep Whispering open or minimized for its global shortcut to work. Closing the w
 ## Included
 
 - Configurable global start/stop shortcut and microphone selection.
-- Always-on-top recording indicator with an audio-driven waveform, transcription progress, and retry. English/German indicator language is selectable in Settings.
-- Local file transcription: WAV, MP3, FLAC, OGG/Vorbis, and supported AAC/M4A files, up to 10 minutes.
+- Draggable, always-on-top recording indicator with an elapsed timer, audio-driven waveform, fixed-size transcription progress, and retry. English/German indicator language is selectable in Settings.
+- Local file transcription: WAV, MP3, FLAC, OGG/Vorbis, and supported AAC/M4A files, up to 60 minutes.
 - Automatic language recognition using Parakeet v3's 25 supported European languages.
 - Local read-aloud with an installed Microsoft Windows SAPI voice. Parakeet itself is speech-to-text only.
 - Latest five recordings, including failures, with retry, WAV export, text export, and delete.
@@ -42,7 +42,7 @@ Export and optional automatic typing intentionally send content to a destination
 
 Windows 10/11 **x64**, a working microphone, and an OpenGL-capable graphics driver for the native UI. Allow approximately 750 MB for the app bundle and additional space for recovery recordings. 8 GB of RAM is recommended; actual performance depends on your CPU. No discrete GPU is required. ARM and older Windows versions have not been validated.
 
-Recordings and imported audio are limited to **10 minutes**. Long recordings are split near quieter boundaries to bound memory usage; words at boundaries can occasionally be imperfect. Microsoft voices already installed in Windows are used for read-aloud. There is no voice download facility. Automatic typing can be blocked by elevated applications and may not work in every control.
+Recordings and imported audio are limited to **60 minutes**. At the recording limit, Whispering automatically stops, saves the audio, and starts transcription. Long recordings are split near quieter boundaries to bound memory usage; words at boundaries can occasionally be imperfect. Microsoft voices already installed in Windows are used for read-aloud. There is no voice download facility. Automatic typing can be blocked by elevated applications and may not work in every control.
 
 ## Build from source
 

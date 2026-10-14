@@ -51,6 +51,8 @@ fn main() -> anyhow::Result<()> {
     let (w, h) = icon.dimensions();
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
+            // All viewports share this GL configuration, including the rounded indicator.
+            .with_transparent(true)
             .with_title("Whispering")
             .with_inner_size(
                 if preview && args.get(5).map(String::as_str) == Some("compact") {

@@ -10,7 +10,7 @@ use std::{
     time::Instant,
 };
 
-pub const MAX_SECONDS: u64 = 600;
+pub const MAX_SECONDS: u64 = 60 * 60;
 pub fn microphones() -> Vec<String> {
     cpal::default_host()
         .input_devices()
@@ -231,7 +231,7 @@ pub fn read_audio(path: &Path) -> Result<Vec<f32>> {
                 .map(|c| c.iter().sum::<f32>() / channels as f32),
         );
         if mono.len() as u64 > rate as u64 * MAX_SECONDS {
-            bail!("Please use audio of 10 minutes or less.");
+            bail!("Please use audio of 60 minutes or less.");
         }
     }
     if mono.is_empty() {

@@ -50,7 +50,7 @@ impl App {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui
                     .add_enabled(!self.locked(), design::secondary("Import audio"))
-                    .on_hover_text("WAV, MP3, FLAC, OGG or M4A · up to 10 minutes")
+                    .on_hover_text("WAV, MP3, FLAC, OGG or M4A · up to 60 minutes")
                     .clicked()
                 {
                     self.import_file();
