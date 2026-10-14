@@ -160,15 +160,7 @@ impl App {
                                 Sense::click(),
                             );
                             let ink = if close.hovered() { p.ink } else { p.muted };
-                            let c = close_rect.center();
-                            ui.painter().line_segment(
-                                [c - vec2(3., 3.), c + vec2(3., 3.)],
-                                Stroke::new(1.2_f32, ink),
-                            );
-                            ui.painter().line_segment(
-                                [c + vec2(-3., 3.), c + vec2(3., -3.)],
-                                Stroke::new(1.2_f32, ink),
-                            );
+                            crate::ui::icon(ui, crate::ui::Icon::Close, close_rect.shrink(3.), ink);
                             dismiss = close.clicked();
                         } else {
                             ui.put(

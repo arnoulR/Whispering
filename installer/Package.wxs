@@ -1,0 +1,13 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Whispering" Manufacturer="Whispering" Version="$(var.Version)"
+           UpgradeCode="BA50DB8B-A53B-47E3-9944-1A4015183DA9" Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Whispering is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Whispering" />
+    </StandardDirectory>
+    <Feature Id="Application" Title="Whispering" Level="1">
+      <Files Include="$(var.BundleDirectory)\**" Directory="INSTALLFOLDER" />
+    </Feature>
+  </Package>
+</Wix>

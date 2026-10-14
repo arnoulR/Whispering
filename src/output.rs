@@ -18,6 +18,32 @@ pub fn target() -> Option<usize> {
         }
     }
 }
+// Retain only the executable basename, never a window title or full path.
+pub fn app_name(target: usize) -> Option<String> {
+    use windows::{
+        core::PWSTR,
+        Win32::{Foundation::CloseHandle, System::Threading::*},
+    };
+    unsafe {
+        let mut pid = 0;
+        GetWindowThreadProcessId(HWND(target as *mut std::ffi::c_void), Some(&mut pid));
+        let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
+        let mut name = vec![0u16; 32768];
+        let mut length = name.len() as u32;
+        let result = QueryFullProcessImageNameW(
+            process,
+            PROCESS_NAME_FORMAT(0),
+            PWSTR(name.as_mut_ptr()),
+            &mut length,
+        );
+        let _ = CloseHandle(process);
+        result.ok()?;
+        let path = String::from_utf16_lossy(&name[..length as usize]);
+        std::path::Path::new(&path)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_lowercase())
+    }
+}
 pub fn type_text(target: usize, text: &str) -> Result<()> {
     unsafe {
         if GetForegroundWindow() != HWND(target as *mut std::ffi::c_void) {

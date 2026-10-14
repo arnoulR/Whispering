@@ -4,6 +4,7 @@ mod audio;
 mod engine;
 mod output;
 mod speech;
+mod statistics;
 mod store;
 mod ui;
 

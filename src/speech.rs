@@ -1,4 +1,9 @@
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{
+    atomic::{AtomicU8, Ordering},
+    Arc,
+};
+use std::time::Duration;
 use windows::{
     core::{w, PCWSTR},
     Win32::{
@@ -8,12 +13,19 @@ use windows::{
     },
 };
 pub enum Command {
-    Speak(String),
+    Toggle(String),
     Stop,
+}
+#[derive(Clone, Copy, PartialEq)]
+pub enum Playback {
+    Idle,
+    Playing,
+    Paused,
 }
 pub struct Speech {
     pub send: Sender<Command>,
     pub errors: Receiver<String>,
+    state: Arc<AtomicU8>,
 }
 unsafe fn local_voice() -> windows::core::Result<ISpVoice> {
     let voice: ISpVoice = CoCreateInstance(&SpVoice, None, CLSCTX_INPROC_SERVER)?;
@@ -25,9 +37,18 @@ unsafe fn local_voice() -> windows::core::Result<ISpVoice> {
     Ok(voice)
 }
 impl Speech {
+    pub fn playback(&self) -> Playback {
+        match self.state.load(Ordering::Relaxed) {
+            1 => Playback::Playing,
+            2 => Playback::Paused,
+            _ => Playback::Idle,
+        }
+    }
     pub fn new() -> Self {
         let (send, rx) = mpsc::channel();
         let (tx, errors) = mpsc::channel();
+        let state = Arc::new(AtomicU8::new(0));
+        let worker_state = state.clone();
         std::thread::spawn(move || unsafe {
             if let Err(e) = CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok() {
                 let _ = tx.send(e.to_string());
@@ -36,23 +57,76 @@ impl Speech {
             let result = (|| -> windows::core::Result<()> {
                 // Only a locally installed Microsoft SAPI voice; no external speech provider.
                 let voice = local_voice()?;
-                for command in rx {
-                    let result = match command {
-                        Command::Speak(text) => {
-                            let text: Vec<u16> = text.encode_utf16().chain(Some(0)).collect();
-                            voice.Speak(
-                                PCWSTR(text.as_ptr()),
-                                (SPF_ASYNC.0 | SPF_PURGEBEFORESPEAK.0 | SPF_IS_NOT_XML.0) as u32,
-                                None,
-                            )
-                        }
-                        Command::Stop => {
-                            voice.Speak(PCWSTR::null(), SPF_PURGEBEFORESPEAK.0 as u32, None)
-                        }
+                let mut current_text = String::new();
+                let mut playing = Playback::Idle;
+                loop {
+                    let command = match rx.recv_timeout(Duration::from_millis(75)) {
+                        Ok(command) => Some(command),
+                        Err(mpsc::RecvTimeoutError::Timeout) => None,
+                        Err(mpsc::RecvTimeoutError::Disconnected) => break,
                     };
+                    let result = (|| -> windows::core::Result<()> {
+                        match command {
+                            Some(Command::Toggle(text))
+                                if playing == Playback::Idle || current_text != text =>
+                            {
+                                if playing == Playback::Paused {
+                                    voice.Resume()?;
+                                }
+                                current_text = text.clone();
+                                let text: Vec<u16> = text.encode_utf16().chain(Some(0)).collect();
+                                voice.Speak(
+                                    PCWSTR(text.as_ptr()),
+                                    (SPF_ASYNC.0 | SPF_PURGEBEFORESPEAK.0 | SPF_IS_NOT_XML.0)
+                                        as u32,
+                                    None,
+                                )?;
+                                playing = Playback::Playing;
+                            }
+                            Some(Command::Toggle(_)) => {
+                                if playing == Playback::Playing {
+                                    voice.Pause()?;
+                                    playing = Playback::Paused;
+                                } else {
+                                    voice.Resume()?;
+                                    playing = Playback::Playing;
+                                }
+                            }
+                            Some(Command::Stop) => {
+                                voice.Speak(PCWSTR::null(), SPF_PURGEBEFORESPEAK.0 as u32, None)?;
+                                if playing == Playback::Paused {
+                                    voice.Resume()?;
+                                }
+                                playing = Playback::Idle;
+                            }
+                            None => {
+                                if playing == Playback::Playing {
+                                    let mut status = SPVOICESTATUS::default();
+                                    voice.GetStatus(&mut status, std::ptr::null_mut())?;
+                                    if status.dwRunningState == SPRS_DONE.0 as u32 {
+                                        playing = Playback::Idle;
+                                    }
+                                }
+                            }
+                        }
+                        Ok(())
+                    })();
                     if let Err(e) = result {
+                        let _ = voice.Speak(PCWSTR::null(), SPF_PURGEBEFORESPEAK.0 as u32, None);
+                        if playing == Playback::Paused {
+                            let _ = voice.Resume();
+                        }
+                        playing = Playback::Idle;
                         let _ = tx.send(e.to_string());
                     }
+                    worker_state.store(
+                        match playing {
+                            Playback::Idle => 0,
+                            Playback::Playing => 1,
+                            Playback::Paused => 2,
+                        },
+                        Ordering::Relaxed,
+                    );
                 }
                 Ok(())
             })();
@@ -61,7 +135,11 @@ impl Speech {
             }
             CoUninitialize();
         });
-        Self { send, errors }
+        Self {
+            send,
+            errors,
+            state,
+        }
     }
 }
 

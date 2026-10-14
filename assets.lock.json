@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "downloads": [
+    {
+      "path": "models/parakeet-v3/encoder-model.int8.onnx",
+      "url": "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/8f23f0c03c8761650bdb5b40aaf3e40d2c15f1ce/encoder-model.int8.onnx",
+      "sha256": "6139d2fa7e1b086097b277c7149725edbab89cc7c7ae64b23c741be4055aff09"
+    },
+    {
+      "path": "models/parakeet-v3/decoder_joint-model.int8.onnx",
+      "url": "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/8f23f0c03c8761650bdb5b40aaf3e40d2c15f1ce/decoder_joint-model.int8.onnx",
+      "sha256": "eea7483ee3d1a30375daedc8ed83e3960c91b098812127a0d99d1c8977667a70"
+    },
+    {
+      "path": "models/parakeet-v3/vocab.txt",
+      "url": "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/8f23f0c03c8761650bdb5b40aaf3e40d2c15f1ce/vocab.txt",
+      "sha256": "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d"
+    },
+    {
+      "path": "models/parakeet-v3/nemo128.onnx",
+      "url": "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/8f23f0c03c8761650bdb5b40aaf3e40d2c15f1ce/nemo128.onnx",
+      "sha256": "a9fde1486ebfcc08f328d75ad4610c67835fea58c73ba57e3209a6f6cf019e9f"
+    },
+    {
+      "path": ".tools/onnxruntime.zip",
+      "url": "https://github.com/microsoft/onnxruntime/releases/download/v1.24.2/onnxruntime-win-x64-1.24.2.zip",
+      "sha256": "8e3e9c826375352e29cb2614fe44f3d7a4b0ff7b8028ad7a456af9d949a7e8b0"
+    }
+  ],
+  "vcRuntime": {
+    "version": "14.40.33807",
+    "source": "Visual Studio licensed redistribution directory; supply with -VcRuntimeDirectory",
+    "files": [
+      {
+        "name": "concrt140.dll",
+        "sha256": "3bfe7958b6c5cc0150927e6da0551829b8e3e1a3a8bb446adbf64f7f84751f74"
+      },
+      {
+        "name": "msvcp140_1.dll",
+        "sha256": "d5b7e39b158ca6d64d10713b69d7baea9ba9c686a9442c9d7217f6914c6a955d"
+      },
+      {
+        "name": "msvcp140_2.dll",
+        "sha256": "fbb8557f73ab9a207bd67643fdcf9ae34527325d227c53707cebdf0d1c8c4658"
+      },
+      {
+        "name": "msvcp140_atomic_wait.dll",
+        "sha256": "d2dc98b3d9cbfebd92d16aeb6be475b68ec30943503014e33b645e5ca7de2cfb"
+      },
+      {
+        "name": "msvcp140_codecvt_ids.dll",
+        "sha256": "d5fbe10526c30aae0665c2409acb55a50cb6d9cd159138ab9ebb19db87bcd59f"
+      },
+      {
+        "name": "msvcp140.dll",
+        "sha256": "7b8a6f283884e6448559dcf510b00c1a885bfb8e598ea05cd2c290c874657326"
+      },
+      {
+        "name": "vccorlib140.dll",
+        "sha256": "93262c0c8fda176297afa3ac8de65807777a468f8c093c06da0d4de676853f25"
+      },
+      {
+        "name": "vcruntime140_1.dll",
+        "sha256": "0e560532e721b6938dafe4055eedd0251ba5eb5994cd96937cebbcf16a7ddae5"
+      },
+      {
+        "name": "vcruntime140_threads.dll",
+        "sha256": "73951fdb23b055bdc1b6be1d0e366c57b68b644784f5a240b0f5712ef11547d0"
+      },
+      {
+        "name": "vcruntime140.dll",
+        "sha256": "642ae52687a7a6bfb03d0b20dc7e07f4b11ceca634f7eb7ba184d6711ab51a51"
+      }
+    ]
+  }
+}

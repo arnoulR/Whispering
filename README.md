@@ -4,7 +4,7 @@ A small native Windows app written in Rust, inspired by TypeWhisper's dictation 
 
 ## Start here
 
-From this project folder, double-click **Start Whispering.cmd**. You can also open `dist\Whispering\Whispering.exe` directly. Windows may hide the `.exe` extension and display it as **Whispering**, with type **Application**.
+From this project folder, double-click **Start Whispering.cmd** to launch the newest staged bundle. After MSI installation, open `C:\Program Files\Whispering\Whispering.exe`. Windows may hide the `.exe` extension and display it as **Whispering**, with type **Application**.
 
 1. Extract the **entire** `Whispering` release folder to a local drive.
 2. Double-click `Whispering.exe`. Keep the model and DLL files beside it.
@@ -23,16 +23,16 @@ Keep Whispering open or minimized for its global shortcut to work. Closing the w
 - Local file transcription: WAV, MP3, FLAC, OGG/Vorbis, and supported AAC/M4A files, up to 60 minutes.
 - Automatic language recognition using Parakeet v3's 25 supported European languages.
 - Local read-aloud with an installed Microsoft Windows SAPI voice. Parakeet itself is speech-to-text only.
-- Latest five recordings, including failures, with retry, WAV export, text export, and delete.
+- Latest ten recordings, including failures, with retry, WAV export, text export, and delete.
 - Recovery after app interruption: audio is written during recording, with its WAV header refreshed on each buffer.
-- Simple dictionary corrections and statistics for the retained recordings.
+- Simple dictionary corrections and persistent local statistics independent of retained recordings.
 - Native interface with light, dark, and Windows system themes, a centered AI sparkle logo, and a short setup guide.
 
 ## Recovery and privacy
 
-Recordings and transcripts are stored in `%LOCALAPPDATA%\Whispering`. Settings and history use atomic file replacement. Another instance cannot open the same data folder while the first is running.
+Recordings and transcripts are stored in `%LOCALAPPDATA%\Whispering`. Settings, history, and statistics use atomic file replacement. Another instance cannot open the same data folder while the first is running.
 
-The default keeps **the latest five recordings for up to 24 hours**, including failures. The sixth replaces the oldest. Settings offer 1 hour, 24 hours, or 7 days. Cleanup runs while idle and on the next launch; nothing runs while the app is closed. Export audio you need to retain. A crash or power loss can lose the last buffer; a full disk or hardware failure can prevent recording. A damaged history index is reported without deleting audio files.
+The default keeps **the latest ten recordings for up to 24 hours**, including failures. The eleventh replaces the oldest. Settings offer 1 hour, 24 hours, or 7 days. Cleanup runs while idle and on the next launch; nothing runs while the app is closed. Export audio you need to retain. A crash or power loss can lose the last buffer; a full disk or hardware failure can prevent recording. A damaged history index is reported without deleting audio files.
 
 There are no cloud providers, accounts, telemetry calls, update checks, plugin loaders, local HTTP servers, or runtime downloads in the app. ONNX telemetry is explicitly disabled. The model and ONNX DLL are SHA-256 checked before inference. The UI has no model selector or model import.
 
@@ -49,18 +49,31 @@ Recordings and imported audio are limited to **60 minutes**. At the recording li
 Install the Rust MSVC toolchain and Visual Studio C++ Build Tools with a Windows SDK. Then:
 
 ```powershell
-./scripts/Fetch-Model.ps1       # developer-only internet download; pinned model and hashes
-./scripts/Fetch-Runtime.ps1     # developer-only internet download; verified Microsoft runtime
+./scripts/Prepare-Assets.ps1   # developer-only downloads verified against assets.lock.json
 ./scripts/Fetch-Licenses.ps1    # license texts omitted from some crate archives
 ./scripts/Build.ps1 -Test
 ./scripts/Build.ps1 -Release
-./scripts/Package.ps1
+$bundle = ./scripts/Build-Package.ps1
+dotnet tool install wix --version 5.0.2 --tool-path .tools/wix
+./scripts/Build-Installer.ps1 -BundleDirectory $bundle
 ```
 
-`dist/Whispering` is the complete portable app. `dist/Whispering-windows-x64.zip` is the distributable archive. `START-HERE.txt` is included. Build scripts access the internet only to prepare dependencies and assets; they are not run by the application. Cargo.lock fixes Rust dependencies. There is no custom model path or alternate inference provider.
+Each package is assembled in a fresh `dist/staging-*/Whispering` folder. Outputs are `dist/Whispering-windows-x64.zip` and `dist/Whispering-windows-x64.msi`. The MSI installs under Program Files. Build scripts access the internet only to prepare dependencies and assets; they are not run by the application. Cargo.lock fixes Rust dependencies; rust-toolchain.toml pins Rust. There is no custom model path or alternate inference provider. See [administration and signing](docs/admin-guide.md) and the [user guide](docs/user-guide.md).
+
+The repository contains source, embedded UI assets, license texts, documentation and release recipes. Binaries, models, signing material, recordings, profiles, security audits and local validation evidence are ignored. Upload distributable binaries to GitHub Releases. Existing local validation files remain on disk but are no longer tracked; historical commits are not rewritten. `assets.lock.json` pins download URLs and hashes; the VC runtime is pinned by version and file hashes and supplied from Visual Studio's redistribution directory.
 
 For a local toolchain in this workspace, `Build.ps1` automatically uses `.tools/cargo` and `.tools/rustup`. These are development files, not part of the release. To regenerate the original icon, run `scripts/Make-Icon.ps1`.
 
 ## Attribution
 
 Whispering is an independent Rust implementation inspired by [TypeWhisper for Windows](https://github.com/TypeWhisper/typewhisper-win). No TypeWhisper implementation code or branding is included. [NVIDIA Parakeet v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) is CC BY 4.0; the bundled quantized [ONNX conversion by Ivan Stupakov](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx) is attributed in `THIRD-PARTY-NOTICES.md`. Rust inference uses [transcribe-rs](https://github.com/cjpais/transcribe-rs), with only the local ONNX feature enabled. See the included dependency notices and licenses.
+
+## Local statistics
+
+The dashboard and Statistics page show the last 7 days, last 30 days, or all time. Completed microphone dictations contribute once to `statistics.json` in the local data folder, independently of the ten retained recordings. Retrying, editing, deleting, or expiring a recording does not add another count or erase its statistics. Imported audio and failed attempts are excluded. Existing completed microphone recordings are migrated on launch before retention cleanup; already deleted recordings cannot be reconstructed.
+
+The statistics file stores a recording identifier, local calendar date, word count, duration, and (when available) the destination executable's basename. It contains no transcript, audio, full executable path, or window title. App names are captured when recording starts; a dictation started in Whispering is attributed to Whispering. Older recordings have no app attribution.
+
+Words per minute uses total words divided by total recorded minutes. Estimated time saved is typing time at 40 words per minute minus recording time, never below zero. Streaks count consecutive active calendar days within the selected period; a current streak can end today or yesterday. Statistics remain locally until their file is removed with the app closed.
+
+Read aloud uses the play icon beside its label; the icon changes to pause while speaking and resumes the same reading when pressed again. Copy text is available in the transcript footer and every History card.

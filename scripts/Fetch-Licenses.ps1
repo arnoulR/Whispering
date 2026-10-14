@@ -13,7 +13,7 @@ foreach ($package in $metadata.packages) {
     if ($package.name -eq 'whispering') {continue}
     $dir=Split-Path $package.manifest_path -Parent
     $existing=Get-ChildItem -LiteralPath $dir -File | Where-Object Name -match '^(LICENSE|LICENCE|COPYING|NOTICE)'
-    if ($existing -or $package.name -eq 'epaint_default_fonts') {continue}
+    if ($existing -or (Test-Path (Join-Path $dir 'LICENSES')) -or $package.name -eq 'epaint_default_fonts') {continue}
     if ($package.repository -notmatch '^https://github.com/') {throw "Review license source for $($package.name)"}
     $repo=$package.repository -replace '^https://github.com/','' -replace '\.git$',''
     $repo=($repo.Split('/')[0..1] -join '/')

@@ -1,0 +1,5 @@
+/.github/workflows/ @arnoulR
+/scripts/ @arnoulR
+/installer/ @arnoulR
+/assets.lock.json @arnoulR
+/deny.toml @arnoulR

@@ -8,7 +8,7 @@ use std::{
 };
 use uuid::Uuid;
 
-pub const KEEP: usize = 5;
+pub const KEEP: usize = 10;
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub enum Status {
     Recording,
@@ -25,6 +25,10 @@ pub struct Entry {
     pub status: Status,
     pub text: String,
     pub error: String,
+    #[serde(default)]
+    pub app: Option<String>,
+    #[serde(default)]
+    pub imported: bool,
 }
 impl Entry {
     pub fn new(label: String) -> Self {
@@ -36,6 +40,8 @@ impl Entry {
             status: Status::Recording,
             text: String::new(),
             error: String::new(),
+            app: None,
+            imported: false,
         }
     }
 }
@@ -104,6 +110,7 @@ pub struct Store {
     pub root: PathBuf,
     pub entries: Vec<Entry>,
     pub settings: Settings,
+    pub statistics: Vec<crate::statistics::Record>,
     _lock: File,
 }
 
@@ -149,8 +156,25 @@ impl Store {
             Settings::default()
         };
         let entries: Vec<Entry> = if root.join("history.json").exists() {
-            serde_json::from_slice(&fs::read(root.join("history.json"))?)
-                .context("History is damaged; your recordings have not been removed.")?
+            let raw: Vec<serde_json::Value> =
+                serde_json::from_slice(&fs::read(root.join("history.json"))?)
+                    .context("History is damaged; your recordings have not been removed.")?;
+            raw.into_iter()
+                .map(|value| {
+                    let legacy = value.get("imported").is_none();
+                    let mut entry: Entry = serde_json::from_value(value)?;
+                    if legacy {
+                        entry.imported = entry.label != "Microphone recording";
+                    }
+                    Ok(entry)
+                })
+                .collect::<Result<_>>()?
+        } else {
+            vec![]
+        };
+        let statistics = if root.join("statistics.json").exists() {
+            serde_json::from_slice(&fs::read(root.join("statistics.json"))?)
+                .context("Statistics are damaged; your recordings have not been removed.")?
         } else {
             vec![]
         };
@@ -158,6 +182,7 @@ impl Store {
             root,
             settings,
             entries,
+            statistics,
             _lock: lock,
         };
         for entry in &mut store.entries {
@@ -168,6 +193,7 @@ impl Store {
                         .into();
             }
         }
+        store.sync_statistics()?;
         store.persist()?;
         store.prune(None)?;
         Ok(store)
@@ -181,7 +207,35 @@ impl Store {
     pub fn save_settings(&self) -> Result<()> {
         atomic_json(&self.root.join("settings.json"), &self.settings)
     }
+    pub fn sync_statistics(&mut self) -> Result<()> {
+        let known: std::collections::HashSet<_> = self.statistics.iter().map(|r| r.id).collect();
+        let mut updated = self.statistics.clone();
+        for entry in self
+            .entries
+            .iter()
+            .filter(|e| e.status == Status::Ready && !e.imported && !known.contains(&e.id))
+        {
+            updated.push(crate::statistics::Record {
+                id: entry.id,
+                day: entry.created.with_timezone(&chrono::Local).date_naive(),
+                words: entry.text.split_whitespace().count(),
+                seconds: if entry.seconds.is_finite() {
+                    entry.seconds.max(0.)
+                } else {
+                    0.
+                },
+                app: entry.app.clone(),
+            });
+        }
+        if updated.len() != self.statistics.len() || !self.root.join("statistics.json").exists() {
+            atomic_json(&self.root.join("statistics.json"), &updated)
+                .context("Could not save local statistics. Recordings have been retained.")?;
+            self.statistics = updated;
+        }
+        Ok(())
+    }
     pub fn add(&mut self, entry: Entry) -> Result<()> {
+        self.sync_statistics()?;
         let id = entry.id;
         self.entries.insert(0, entry);
         if let Err(error) = self.persist() {
@@ -191,6 +245,7 @@ impl Store {
         self.prune(Some(id))
     }
     pub fn prune(&mut self, active: Option<Uuid>) -> Result<()> {
+        self.sync_statistics()?;
         let cutoff = Utc::now()
             - chrono::Duration::hours(self.settings.retention_hours.clamp(1, 168) as i64);
         let remove: Vec<Uuid> = self
@@ -206,6 +261,7 @@ impl Store {
         Ok(())
     }
     pub fn delete(&mut self, id: Uuid) -> Result<()> {
+        self.sync_statistics()?;
         let audio = self.audio(id);
         if audio.exists() {
             fs::remove_file(audio).context("Could not delete recording; it remains in history.")?;
@@ -243,6 +299,85 @@ pub fn apply_rules(text: &str, rules: &[Rule]) -> String {
 mod tests {
     use super::*;
     #[test]
+    fn statistics_survive_deletion_restart_and_do_not_double_count() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut store = Store::open(dir.path().into()).unwrap();
+        let mut entry = Entry::new("Microphone recording".into());
+        entry.status = Status::Ready;
+        entry.text = "one two three".into();
+        entry.seconds = 2.;
+        let id = entry.id;
+        store.add(entry).unwrap();
+        store.sync_statistics().unwrap();
+        store.entries[0].text = "edited transcript with many more words".into();
+        store.sync_statistics().unwrap();
+        assert_eq!(store.statistics.len(), 1);
+        assert_eq!(store.statistics[0].words, 3);
+        store.delete(id).unwrap();
+        drop(store);
+        let store = Store::open(dir.path().into()).unwrap();
+        assert!(store.entries.is_empty());
+        assert_eq!(store.statistics.len(), 1);
+        assert_eq!(store.statistics[0].words, 3);
+    }
+    #[test]
+    fn imports_and_failures_are_excluded_and_expiry_keeps_statistics() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut store = Store::open(dir.path().into()).unwrap();
+        let mut import = Entry::new("file.wav".into());
+        import.imported = true;
+        import.status = Status::Ready;
+        import.text = "imported words".into();
+        store.add(import).unwrap();
+        store.add(Entry::new("Failed".into())).unwrap();
+        let mut old = Entry::new("Microphone recording".into());
+        old.created = Utc::now() - chrono::Duration::days(2);
+        old.status = Status::Ready;
+        old.text = "saved statistic".into();
+        let id = old.id;
+        store.add(old).unwrap();
+        store.prune(None).unwrap();
+        assert!(!store.entries.iter().any(|e| e.id == id));
+        assert_eq!(store.statistics.len(), 1);
+        assert_eq!(store.statistics[0].words, 2);
+    }
+    #[test]
+    fn legacy_history_is_migrated_before_expiry() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut entry = Entry::new("Microphone recording".into());
+        entry.status = Status::Ready;
+        entry.created = Utc::now() - chrono::Duration::days(2);
+        entry.text = "legacy words".into();
+        let mut raw = serde_json::to_value(&entry).unwrap();
+        raw.as_object_mut().unwrap().remove("imported");
+        raw.as_object_mut().unwrap().remove("app");
+        let mut imported = raw.clone();
+        imported["id"] = serde_json::to_value(Uuid::new_v4()).unwrap();
+        imported["label"] = "old-import.wav".into();
+        atomic_json(&dir.path().join("history.json"), &vec![raw, imported]).unwrap();
+        let store = Store::open(dir.path().into()).unwrap();
+        assert!(store.entries.is_empty());
+        assert_eq!(store.statistics.len(), 1);
+        assert_eq!(store.statistics[0].words, 2);
+        drop(store);
+        assert_eq!(Store::open(dir.path().into()).unwrap().statistics.len(), 1);
+    }
+    #[test]
+    fn failed_statistics_write_preserves_recording() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut store = Store::open(dir.path().into()).unwrap();
+        let mut entry = Entry::new("Microphone recording".into());
+        entry.status = Status::Ready;
+        entry.text = "keep this".into();
+        let id = entry.id;
+        store.entries.push(entry);
+        fs::write(store.audio(id), b"audio").unwrap();
+        fs::create_dir(dir.path().join("statistics.pending")).unwrap();
+        assert!(store.delete(id).is_err());
+        assert!(store.audio(id).exists());
+        assert_eq!(store.entries.len(), 1);
+    }
+    #[test]
     fn failures_survive_restart_and_can_be_retried() {
         let dir = tempfile::tempdir().unwrap();
         let id;
@@ -258,16 +393,16 @@ mod tests {
         assert!(s.audio(id).exists());
     }
     #[test]
-    fn only_five_audio_files_remain() {
+    fn only_ten_audio_files_remain() {
         let dir = tempfile::tempdir().unwrap();
         let mut s = Store::open(dir.path().into()).unwrap();
-        for _ in 0..7 {
+        for _ in 0..12 {
             let e = Entry::new("Mic".into());
             fs::write(s.audio(e.id), b"audio").unwrap();
             s.add(e).unwrap();
         }
-        assert_eq!(s.entries.len(), 5);
-        assert_eq!(fs::read_dir(s.root.join("recordings")).unwrap().count(), 5);
+        assert_eq!(s.entries.len(), 10);
+        assert_eq!(fs::read_dir(s.root.join("recordings")).unwrap().count(), 10);
     }
     #[test]
     fn expired_audio_is_deleted() {

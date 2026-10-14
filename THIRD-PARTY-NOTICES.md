@@ -21,3 +21,7 @@ The model was exported to ONNX and quantized to INT8 by **Ivan Stupakov**, https
 ## Product reference
 
 TypeWhisper for Windows (https://github.com/TypeWhisper/typewhisper-win) was consulted as a feature reference. Its source is GPLv3/commercially licensed. No source implementation, icons, or branding were copied into Whispering. The Whispering logo and UI are original.
+## Font and icons
+
+- Roboto, from https://github.com/google/fonts/tree/main/ofl/roboto, is embedded in the app. Licensed under SIL Open Font License 1.1; see `licenses/Roboto-OFL.txt`.
+- Lucide icons 0.468.0, from https://github.com/lucide-icons/lucide/tree/0.468.0/icons, are embedded SVG assets. Their stroke color is set to white for theme tinting. See `licenses/Lucide-LICENSE.txt` for the ISC license and inherited Feather MIT notices.

@@ -1,0 +1,57 @@
+name: Publish verified release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag (v plus Cargo.toml version)
+        required: true
+permissions:
+  contents: read
+jobs:
+  publish:
+    # A protected Windows runner with the pinned VC runtime, WiX and signed EXE.
+    # Configure the release environment and its approval rules before enabling.
+    runs-on: [self-hosted, Windows, X64, whispering-release]
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.tag }}
+          clean: true
+      - name: Check version and signed build
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          SIGNER: ${{ vars.SIGNER_THUMBPRINT }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (!$env:SIGNER) { throw 'Configure SIGNER_THUMBPRINT in the release environment.' }
+          $toml = Get-Content Cargo.toml -Raw
+          if ($toml -notmatch '(?m)^version = "([0-9.]+)"' -or $env:RELEASE_TAG -cne "v$($Matches[1])") { throw 'Release tag/version mismatch' }
+          ./scripts/Prepare-Assets.ps1
+          ./scripts/Build.ps1 -Test
+          cargo install cargo-deny --version 0.20.2 --locked
+          cargo deny --locked check
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency policy failed' }
+          dotnet tool install wix --version 5.0.2 --tool-path .tools/wix
+          if ($LASTEXITCODE -ne 0) { throw 'WiX installation failed' }
+          ./scripts/Build.ps1 -Release
+          # The runner's signing hook must use OIDC or environment-scoped secrets.
+          # It is maintained outside Git; no private signing material belongs here.
+          if (!$env:WHISPERING_SIGN_SCRIPT) { throw 'Configure the runner signing hook.' }
+          & $env:WHISPERING_SIGN_SCRIPT -Path (Resolve-Path target/release/whispering.exe).Path
+          $bundle = ./scripts/Build-Package.ps1 -RequireSignature -SignerThumbprint $env:SIGNER
+          ./scripts/Build-Installer.ps1 -BundleDirectory $bundle
+          & $env:WHISPERING_SIGN_SCRIPT -Path (Resolve-Path dist/Whispering-windows-x64.msi).Path
+          $sig = Get-AuthenticodeSignature dist/Whispering-windows-x64.msi
+          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Thumbprint -ne $env:SIGNER) { throw 'MSI signature verification failed' }
+      - name: Upload draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          gh release create $env:RELEASE_TAG dist/Whispering-windows-x64.zip dist/Whispering-windows-x64.msi --verify-tag --draft --title "Whispering $env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed' }

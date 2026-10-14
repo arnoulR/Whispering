@@ -186,48 +186,8 @@ impl App {
             );
         }
         ui.add_space(18.);
-        let words: usize = self
-            .store
-            .entries
-            .iter()
-            .map(|e| e.text.split_whitespace().count())
-            .sum();
-        let seconds = self.store.entries.iter().fold(0.0, |n, e| n + e.seconds);
-        let stats = [
-            (self.store.entries.len().to_string(), "Recordings"),
-            (words.to_string(), "Words"),
-            (format!("{:.1}", seconds / 60.), "Minutes"),
-        ];
-        let (stats_rect, stats_response) =
-            ui.allocate_exact_size(vec2(ui.available_width(), 76.), egui::Sense::hover());
-        stats_response.on_hover_text("Totals for recordings currently in History");
-        for (i, (value, label)) in stats.iter().enumerate() {
-            let x = stats_rect.left() + i as f32 * stats_rect.width() / 3.;
-            if i > 0 {
-                ui.painter().line_segment(
-                    [
-                        pos2(x, stats_rect.top() + 16.),
-                        pos2(x, stats_rect.bottom() - 14.),
-                    ],
-                    Stroke::new(1.0_f32, p.border),
-                );
-            }
-            ui.painter().text(
-                pos2(x + 20., stats_rect.top() + 8.),
-                Align2::LEFT_TOP,
-                value,
-                FontId::proportional(25.),
-                p.ink,
-            );
-            ui.painter().text(
-                pos2(x + 20., stats_rect.top() + 44.),
-                Align2::LEFT_TOP,
-                label,
-                FontId::proportional(12.),
-                p.muted,
-            );
-        }
-        ui.add_space(18.);
+        self.dashboard_statistics(ui);
+        ui.add_space(12.);
         self.editor(ui);
     }
     fn editor(&mut self, ui: &mut egui::Ui) {
@@ -237,33 +197,45 @@ impl App {
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Transcript").size(16.).strong());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui
-                        .add_enabled(
-                            !self.text.trim().is_empty(),
-                            egui::Button::new("Read aloud").frame(false),
+                    let playing = self.speech.playback() == crate::speech::Playback::Playing;
+                    let paused = self.speech.playback() == crate::speech::Playback::Paused;
+                    ui.add_enabled_ui(!self.text.trim().is_empty(), |ui| {
+                        if design::icon_button(
+                            ui,
+                            if playing { Icon::Pause } else { Icon::Play },
+                            if playing {
+                                "Pause reading"
+                            } else if paused {
+                                "Resume reading"
+                            } else {
+                                "Read aloud"
+                            },
+                            playing,
                         )
                         .clicked()
-                        && self
-                            .speech
-                            .send
-                            .send(Command::Speak(self.text.clone()))
-                            .is_err()
-                    {
-                        self.message = "Local Windows voice is unavailable.".into();
-                    }
-                    if design::icon_button(ui, Icon::Stop, "Stop reading", false).clicked() {
-                        let _ = self.speech.send.send(Command::Stop);
-                    }
+                            && self
+                                .speech
+                                .send
+                                .send(Command::Toggle(self.text.clone()))
+                                .is_err()
+                        {
+                            self.message = "Local Windows voice is unavailable.".into();
+                        }
+                    });
+                    ui.label(RichText::new("Read aloud").size(13.).color(p.muted));
                 });
             });
             ui.add_space(8.);
-            ui.add_sized(
+            let edited = ui.add_sized(
                 [ui.available_width(), 135.],
                 egui::TextEdit::multiline(&mut self.text)
                     .frame(false)
                     .font(FontId::proportional(16.))
                     .hint_text("Your transcript will appear here."),
             );
+            if edited.changed() {
+                let _ = self.speech.send.send(Command::Stop);
+            }
             ui.add_space(6.);
             ui.separator();
             ui.horizontal(|ui| {
@@ -284,6 +256,12 @@ impl App {
                         {
                             self.report(std::fs::write(path, &self.text).map_err(Into::into));
                         }
+                    }
+                    if ui
+                        .add_enabled(!self.text.trim().is_empty(), design::secondary("Copy text"))
+                        .clicked()
+                    {
+                        ui.ctx().copy_text(self.text.clone());
                     }
                     if self.selected.is_some()
                         && ui
@@ -313,7 +291,7 @@ impl App {
             Self::title(ui, "History");
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.label(
-                    RichText::new(format!("{} / 5 recordings", self.store.entries.len()))
+                    RichText::new(format!("{} / 10 recordings", self.store.entries.len()))
                         .color(p.muted)
                         .size(13.),
                 );
@@ -327,7 +305,7 @@ impl App {
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new("No recordings yet").size(20.));
                     ui.label(
-                        RichText::new("Your last five recordings will appear here.").color(p.muted),
+                        RichText::new("Your last ten recordings will appear here.").color(p.muted),
                     );
                 });
                 ui.add_space(40.);
@@ -399,6 +377,15 @@ impl App {
                     }
                     if ui
                         .add_enabled(
+                            !entry.text.trim().is_empty(),
+                            design::secondary("Copy text"),
+                        )
+                        .clicked()
+                    {
+                        ui.ctx().copy_text(entry.text.clone());
+                    }
+                    if ui
+                        .add_enabled(
                             self.recorder.as_ref().map(|r| r.0) != Some(entry.id),
                             egui::Button::new("Export audio").frame(false),
                         )
@@ -431,6 +418,7 @@ impl App {
             ui.add_space(4.);
         }
         if let Some(id) = select {
+            let _ = self.speech.send.send(Command::Stop);
             self.selected = Some(id);
             self.text = self
                 .store
@@ -603,8 +591,8 @@ impl App {
         });
         ui.add_space(8.);
         design::card(p).show(ui,|ui|{
-            ui.set_width(ui.available_width());ui.horizontal(|ui|{ui.vertical(|ui|{ui.label(RichText::new("Recording recovery").strong());ui.label(RichText::new("Keep the latest 5 recordings").size(13.).color(p.muted));});ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
-                egui::ComboBox::from_id_salt("retention").selected_text(match self.store.settings.retention_hours{1=>"1 hour",168=>"7 days",_=>"24 hours"}).width(135.).show_ui(ui,|ui|{for(hours,label)in [(1,"1 hour"),(24,"24 hours"),(168,"7 days")]{ui.selectable_value(&mut self.store.settings.retention_hours,hours,label);}}).response.on_hover_text("The sixth recording replaces the oldest, including failures. Expired audio and text are deleted while open or on the next launch.");
+            ui.set_width(ui.available_width());ui.horizontal(|ui|{ui.vertical(|ui|{ui.label(RichText::new("Recording recovery").strong());ui.label(RichText::new("Keep the latest 10 recordings").size(13.).color(p.muted));});ui.with_layout(egui::Layout::right_to_left(egui::Align::Center),|ui|{
+                egui::ComboBox::from_id_salt("retention").selected_text(match self.store.settings.retention_hours{1=>"1 hour",168=>"7 days",_=>"24 hours"}).width(135.).show_ui(ui,|ui|{for(hours,label)in [(1,"1 hour"),(24,"24 hours"),(168,"7 days")]{ui.selectable_value(&mut self.store.settings.retention_hours,hours,label);}}).response.on_hover_text("The eleventh recording replaces the oldest, including failures. Expired audio and text are deleted while open or on the next launch.");
             });});
         });
         ui.add_space(12.);
@@ -628,7 +616,7 @@ impl App {
             (
                 "03",
                 "Retry from History",
-                "Your last 5 recordings are saved for 24 hours by default.",
+                "Your last 10 recordings are saved for 24 hours by default.",
             ),
         ] {
             design::card(p).show(ui, |ui| {
@@ -688,13 +676,14 @@ impl eframe::App for App {
                 for (page, symbol, label) in [
                     (Page::Dashboard, Icon::Mic, "Dictation"),
                     (Page::History, Icon::History, "History"),
+                    (Page::Statistics, Icon::Statistics, "Statistics"),
                     (Page::Dictionary, Icon::Book, "Dictionary"),
                 ] {
                     if design::nav(ui, symbol, label, self.page == page).clicked() {
                         self.page = page;
                     }
                 }
-                ui.add_space((ui.available_height() - 290.).max(16.));
+                ui.add_space((ui.available_height() - 240.).max(16.));
                 if design::nav(ui, Icon::Settings, "Settings", self.page == Page::Settings)
                     .clicked()
                 {
@@ -704,27 +693,18 @@ impl eframe::App for App {
                     self.page = Page::Guide;
                 }
                 ui.add_space(12.);
-                self.theme_switch(ui);
-                ui.add_space(12.);
+
                 egui::Frame::new()
                     .fill(p.surface)
                     .corner_radius(10)
                     .inner_margin(13.)
                     .show(ui, |ui| {
                         ui.set_width(152.);
-                        ui.horizontal(|ui| {
-                            let (dot, _) =
-                                ui.allocate_exact_size(vec2(8., 8.), egui::Sense::hover());
-                            ui.painter().circle_filled(
-                                dot.center(),
-                                3.,
-                                if self.model_ready { p.accent } else { p.muted },
-                            );
-                            ui.label(RichText::new("Parakeet v3").size(13.).strong());
-                        });
+                        ui.label(RichText::new("Model:").size(11.).color(p.muted));
+                        ui.label(RichText::new("Parakeet v3").size(13.).strong());
                         ui.label(
                             RichText::new(if self.model_ready {
-                                "On device · Ready"
+                                "On device"
                             } else if self.model == "Model unavailable" {
                                 "Model unavailable"
                             } else {
@@ -761,6 +741,7 @@ impl eframe::App for App {
                         match self.page {
                             Page::Dashboard => self.dashboard(ui),
                             Page::History => self.history(ui),
+                            Page::Statistics => self.statistics_page(ui),
                             Page::Dictionary => self.dictionary(ui),
                             Page::Settings => self.settings(ui),
                             Page::Guide => self.guide(ui),

@@ -17,6 +17,7 @@ type ImportedAudio = Result<(String, Vec<f32>), String>;
 enum Page {
     Dashboard,
     History,
+    Statistics,
     Dictionary,
     Settings,
     Guide,
@@ -26,6 +27,7 @@ pub struct App {
     engine: Engine,
     speech: Speech,
     page: Page,
+    stats_period: crate::statistics::Period,
     manager: Option<GlobalHotKeyManager>,
     hotkey: Option<HotKey>,
     hotkey_edit: String,
@@ -76,6 +78,7 @@ impl App {
             engine: Engine::start(cc.egui_ctx.clone()),
             speech: Speech::new(),
             page,
+            stats_period: crate::statistics::Period::Total,
             manager: GlobalHotKeyManager::new().ok(),
             hotkey: None,
             hotkey_edit,
@@ -102,6 +105,10 @@ impl App {
         };
         let args: Vec<String> = std::env::args().collect();
         if args.get(1).map(String::as_str) == Some("--preview") {
+            if let Some(entry) = app.store.entries.iter().find(|e| e.status == Status::Ready) {
+                app.selected = Some(entry.id);
+                app.text = entry.text.clone();
+            }
             if let Some(theme) = args.get(4) {
                 app.store.settings.theme = if theme == "light" {
                     crate::store::Theme::Light
@@ -113,6 +120,7 @@ impl App {
             app.page = match args.get(3).map(String::as_str) {
                 Some("guide") => Page::Guide,
                 Some("history") => Page::History,
+                Some("statistics") => Page::Statistics,
                 Some("settings") => Page::Settings,
                 Some("dictionary") => Page::Dictionary,
                 _ => Page::Dashboard,
@@ -264,10 +272,16 @@ impl App {
             self.message = "Please wait for the current transcription to finish.".into();
             return;
         }
-        let entry = Entry::new("Microphone recording".into());
+        let mut entry = Entry::new("Microphone recording".into());
+        let _ = self.speech.send.send(Command::Stop);
         let id = entry.id;
+        let foreground = crate::output::target();
+        entry.app = foreground.and_then(crate::output::app_name);
+        if foreground.is_none() {
+            entry.app = Some("Whispering".into());
+        }
         self.output_target = if self.store.settings.type_into_app {
-            crate::output::target()
+            foreground
         } else {
             None
         };
@@ -347,6 +361,7 @@ impl App {
             match result {
                 Ok((label, samples)) => {
                     let mut entry = Entry::new(label);
+                    entry.imported = true;
                     entry.seconds = samples.len() as f64 / 16000.;
                     let id = entry.id;
                     // Record metadata first so a crash during the import remains discoverable.
@@ -356,6 +371,7 @@ impl App {
                         .and_then(|_| audio::write_wav(&self.store.audio(id), &samples));
                     match result {
                         Ok(()) => {
+                            let _ = self.speech.send.send(Command::Stop);
                             self.selected = Some(id);
                             self.text.clear();
                             self.transcribe(id);
@@ -414,6 +430,8 @@ impl App {
                         self.text = entry.text.clone();
                     }
                     let saved = self.store.persist();
+                    let stats_saved = self.store.sync_statistics();
+                    self.report(stats_saved);
                     if saved.is_ok()
                         && self
                             .store
@@ -448,5 +466,7 @@ impl App {
 }
 #[path = "overlay.rs"]
 mod overlay;
+#[path = "statistics_view.rs"]
+mod statistics_view;
 #[path = "views.rs"]
 mod views;

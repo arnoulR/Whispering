@@ -53,16 +53,19 @@ impl Palette {
 }
 pub fn install(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
-    if let Ok(data) = std::fs::read("C:/Windows/Fonts/segoeui.ttf") {
-        fonts
-            .font_data
-            .insert("segoe".into(), egui::FontData::from_owned(data).into());
+    fonts.font_data.insert(
+        "Roboto".into(),
+        egui::FontData::from_static(include_bytes!("../assets/fonts/Roboto.ttf")).into(),
+    );
+    // Cover all app text, including editors and shortcut labels; retain glyph fallbacks.
+    for family in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
         fonts
             .families
-            .get_mut(&egui::FontFamily::Proportional)
+            .get_mut(&family)
             .unwrap()
-            .insert(0, "segoe".into());
+            .insert(0, "Roboto".into());
     }
+    egui_extras::install_image_loaders(ctx);
     ctx.set_fonts(fonts);
     for theme in [egui::Theme::Dark, egui::Theme::Light] {
         let p = Palette::new(theme == egui::Theme::Dark);
@@ -146,135 +149,28 @@ pub enum Icon {
     Moon,
     Monitor,
     Trash,
-    Stop,
+    Play,
+    Pause,
+    Statistics,
+    Close,
 }
-pub fn icon(painter: &egui::Painter, icon: Icon, rect: Rect, color: Color32) {
-    let s = Stroke::new(1.6_f32, color);
-    let o = rect.min;
-    let k = rect.width() / 24.;
-    let pt = |x: f32, y: f32| o + vec2(x * k, y * k);
-    let line = |a: (f32, f32), b: (f32, f32)| {
-        painter.line_segment([pt(a.0, a.1), pt(b.0, b.1)], s);
+pub fn icon(ui: &egui::Ui, icon: Icon, rect: Rect, color: Color32) {
+    let source = match icon {
+        Icon::Mic => egui::include_image!("../assets/icons/mic.svg"),
+        Icon::History => egui::include_image!("../assets/icons/history.svg"),
+        Icon::Book => egui::include_image!("../assets/icons/book-open.svg"),
+        Icon::Settings => egui::include_image!("../assets/icons/settings-2.svg"),
+        Icon::Help => egui::include_image!("../assets/icons/circle-help.svg"),
+        Icon::Sun => egui::include_image!("../assets/icons/sun.svg"),
+        Icon::Moon => egui::include_image!("../assets/icons/moon.svg"),
+        Icon::Monitor => egui::include_image!("../assets/icons/monitor.svg"),
+        Icon::Trash => egui::include_image!("../assets/icons/trash-2.svg"),
+        Icon::Play => egui::include_image!("../assets/icons/play.svg"),
+        Icon::Pause => egui::include_image!("../assets/icons/pause.svg"),
+        Icon::Statistics => egui::include_image!("../assets/icons/chart-no-axes-combined.svg"),
+        Icon::Close => egui::include_image!("../assets/icons/x.svg"),
     };
-    let circle = |x: f32, y: f32, r: f32| {
-        painter.circle_stroke(pt(x, y), r * k, s);
-    };
-    match icon {
-        Icon::Stop => {
-            painter.rect_stroke(
-                Rect::from_min_max(pt(6., 6.), pt(18., 18.)),
-                2,
-                s,
-                egui::StrokeKind::Inside,
-            );
-        }
-        Icon::Mic => {
-            painter.rect_stroke(
-                Rect::from_min_max(pt(8., 3.), pt(16., 15.)),
-                4,
-                s,
-                egui::StrokeKind::Inside,
-            );
-            painter.add(egui::Shape::line(
-                vec![
-                    pt(5., 11.),
-                    pt(5., 15.),
-                    pt(8., 19.),
-                    pt(16., 19.),
-                    pt(19., 15.),
-                    pt(19., 11.),
-                ],
-                s,
-            ));
-            line((12., 19.), (12., 22.));
-            line((8., 22.), (16., 22.));
-        }
-        Icon::History => {
-            circle(12., 12., 8.);
-            line((12., 7.), (12., 12.));
-            line((12., 12.), (16., 14.));
-        }
-        Icon::Book => {
-            painter.rect_stroke(
-                Rect::from_min_max(pt(4., 4.), pt(20., 21.)),
-                2,
-                s,
-                egui::StrokeKind::Inside,
-            );
-            line((8., 4.), (8., 21.));
-            line((11., 9.), (17., 9.));
-            line((11., 13.), (16., 13.));
-        }
-        Icon::Settings => {
-            for y in [6., 12., 18.] {
-                line((4., y), (20., y));
-            }
-            for (x, y) in [(9., 6.), (16., 12.), (8., 18.)] {
-                painter.circle_filled(pt(x, y), 2.5 * k, color);
-            }
-        }
-        Icon::Help => {
-            circle(12., 12., 9.);
-            painter.text(
-                pt(12., 11.),
-                Align2::CENTER_CENTER,
-                "?",
-                FontId::proportional(17. * k),
-                color,
-            );
-        }
-        Icon::Sun => {
-            circle(12., 12., 4.);
-            for i in 0..8 {
-                let a = i as f32 * std::f32::consts::TAU / 8.;
-                let d = vec2(a.cos(), a.sin());
-                painter.line_segment([pt(12., 12.) + d * 7. * k, pt(12., 12.) + d * 9. * k], s);
-            }
-        }
-        Icon::Moon => {
-            let points = (0..=24)
-                .map(|i| {
-                    let a = 0.25 + i as f32 / 24. * 4.7;
-                    pt(12. + 8. * a.cos(), 12. + 8. * a.sin())
-                })
-                .collect::<Vec<_>>();
-            painter.add(egui::Shape::line(points, s));
-            painter.add(egui::Shape::line(
-                vec![
-                    pt(12., 4.),
-                    pt(9., 7.),
-                    pt(9., 12.),
-                    pt(12., 16.),
-                    pt(17., 17.),
-                    pt(20., 15.),
-                ],
-                s,
-            ));
-        }
-        Icon::Monitor => {
-            painter.rect_stroke(
-                Rect::from_min_max(pt(3., 4.), pt(21., 17.)),
-                2,
-                s,
-                egui::StrokeKind::Inside,
-            );
-            line((12., 17.), (12., 21.));
-            line((8., 21.), (16., 21.));
-        }
-
-        Icon::Trash => {
-            line((5., 7.), (19., 7.));
-            line((9., 4.), (15., 4.));
-            painter.rect_stroke(
-                Rect::from_min_max(pt(7., 8.), pt(17., 21.)),
-                2,
-                s,
-                egui::StrokeKind::Inside,
-            );
-            line((10., 11.), (10., 18.));
-            line((14., 11.), (14., 18.));
-        }
-    }
+    egui::Image::new(source).tint(color).paint_at(ui, rect);
 }
 pub fn nav(ui: &mut egui::Ui, symbol: Icon, label: &str, selected: bool) -> egui::Response {
     let p = Palette::of(ui);
@@ -307,7 +203,7 @@ pub fn nav(ui: &mut egui::Ui, symbol: Icon, label: &str, selected: bool) -> egui
         );
     }
     icon(
-        ui.painter(),
+        ui,
         symbol,
         Rect::from_center_size(rect.left_center() + vec2(24., 0.), vec2(19., 19.)),
         color,
@@ -337,7 +233,7 @@ pub fn icon_button(ui: &mut egui::Ui, symbol: Icon, label: &str, selected: bool)
         egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), label)
     });
     icon(
-        ui.painter(),
+        ui,
         symbol,
         Rect::from_center_size(response.rect.center(), vec2(18., 18.)),
         if selected { p.accent } else { p.muted },

@@ -5,7 +5,34 @@
 /models/*
 !/models/README.md
 *.partial
-/docs/validation/preview-data/
-/docs/validation/redesign/preview-data/
+# Generated binaries, packages, and signing material
+*.exe
+*.dll
+*.pdb
+*.msi
+*.msix
+*.zip
+*.pfx
+*.p12
+*.key
+*.pem
+*.onnx
 
-/docs/validation/indicator/preview-data/
+# Local audits and machine-specific validation evidence (never release inputs)
+/docs/validation/
+/docs/VALIDATION.md
+**/*[Aa][Uu][Dd][Ii][Tt]*/
+**/*[Aa][Uu][Dd][Ii][Tt]*.*
+**/*[Ss][Ee][Cc][Uu][Rr][Ii][Tt][Yy]-[Aa][Ss][Ss][Ee][Ss][Ss][Mm][Ee][Nn][Tt]*
+**/*[Ss][Ee][Cc][Uu][Rr][Ii][Tt][Yy]_[Aa][Ss][Ss][Ee][Ss][Ss][Mm][Ee][Nn][Tt]*
+
+# Private recordings, exports, and local profiles
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+/recordings/
+/profiles/
+/user-data/
+**/preview-data/
