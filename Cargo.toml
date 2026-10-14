@@ -21,7 +21,7 @@ chrono = { version = "0.4", features = ["serde"] }
 regex = "1"
 sha2 = "0.10"
 fs2 = "0.4"
-symphonia = { version = "0.5", features = ["mp3", "wav", "flac", "ogg", "vorbis", "pcm", "aac", "isomp4"] }
+symphonia = { version = "0.6", features = ["mp3", "wav", "flac", "ogg", "vorbis", "pcm", "aac", "isomp4"] }
 transcribe-rs = { version = "=0.3.12", default-features = false, features = ["onnx"] }
 ort = { version = "=2.0.0-rc.12", default-features = false, features = ["load-dynamic"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
